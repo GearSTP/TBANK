@@ -1,0 +1,105 @@
+import re
+from collections import defaultdict
+
+def read():
+    K = int(input().strip())
+    words = []
+    while True:
+        line = input()
+        if line == '':
+            break
+        for point in line.split():
+            transform = re.sub(r"[^a-z']", "", point.lower())
+            if transform:
+                words.append(transform)
+
+    n = len(words)
+    word_id = {}
+    unique_words = []
+    for w in words:
+        if w not in word_id:
+            word_id[w] = len(unique_words)
+            unique_words.append(w)
+    m = len(unique_words)
+    posi = [word_id[w] for w in words]
+
+    parent = list(range(m))
+    lvl = [0] * m
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(x, y):
+        x = find(x)
+        y = find(y)
+        if x == y:
+            return
+        if lvl[x] < lvl[y]:
+            parent[x] = y
+        elif lvl[x] > lvl[y]:
+            parent[y] = x
+        else:
+            parent[y] = x
+            lvl[x] += 1
+
+    letter = [chr(ord('a') + i) for i in range(26)] + ["'"]
+
+    for i, w in enumerate(unique_words):
+        if len(w) <= 1:
+            continue
+        L = len(w)
+
+        for pos in range(L):
+            orig = w[pos]
+            for c in letter:
+                if c == orig:
+                    continue
+                var = w[:pos] + c + w[pos+1:]
+                if var in word_id:
+                    union(i, word_id[var])
+
+        if w[-1] in ('e', 's'):
+            var = w[:-1]
+            if len(var) >= 2 and var in word_id:
+                union(i, word_id[var])
+
+        for k in ('e', 's'):
+            var = w + k
+            if var in word_id:
+                union(i, word_id[var])
+
+    gr = [find(i) for i in range(m)]
+
+
+    glav = {}
+    for i, w in enumerate(unique_words):
+        g = gr[i]
+        if g not in glav or w < glav[g]:
+            glav[g] = w
+
+    per = defaultdict(int)        
+    for idx, wid in enumerate(posi):
+        g = gr[wid]
+        left = max(0, idx - K)
+        right = min(n, idx + K + 1)
+        found = False
+        for j in range(left, right):
+            if j == idx:
+                continue
+            if gr[posi[j]] == g:
+                found = True
+                break
+        if found:
+            per[g] += 1
+
+    result = [(glav[g], cnt) for g, cnt in per.items() if cnt > 0]
+    result.sort(key=lambda x: (-x[1], x[0])) 
+
+    for i, j in result:
+        print(f"{i}: {j}")
+
+
+read()
